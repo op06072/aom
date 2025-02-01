@@ -117,26 +117,30 @@ void aom_fdct4x4_lp_neon(const int16_t *input, int16_t *final_output,
 }
 
 #if CONFIG_INTERNAL_STATS
-void aom_fdct8x8_neon(const int16_t *input, int16_t *final_output, int stride) {
+void aom_fdct8x8_helper(const int16_t *input, int stride,
+                        int16x8_t *input_0, int16x8_t *input_1,
+                        int16x8_t *input_2, int16x8_t *input_3,
+                        int16x8_t *input_4, int16x8_t *input_5,
+                        int16x8_t *input_6, int16x8_t *input_7) {
   // stage 1
-  int16x8_t input_0 = vshlq_n_s16(vld1q_s16(&input[0 * stride]), 2);
-  int16x8_t input_1 = vshlq_n_s16(vld1q_s16(&input[1 * stride]), 2);
-  int16x8_t input_2 = vshlq_n_s16(vld1q_s16(&input[2 * stride]), 2);
-  int16x8_t input_3 = vshlq_n_s16(vld1q_s16(&input[3 * stride]), 2);
-  int16x8_t input_4 = vshlq_n_s16(vld1q_s16(&input[4 * stride]), 2);
-  int16x8_t input_5 = vshlq_n_s16(vld1q_s16(&input[5 * stride]), 2);
-  int16x8_t input_6 = vshlq_n_s16(vld1q_s16(&input[6 * stride]), 2);
-  int16x8_t input_7 = vshlq_n_s16(vld1q_s16(&input[7 * stride]), 2);
+  *input_0 = vshlq_n_s16(vld1q_s16(&input[0 * stride]), 2);
+  *input_1 = vshlq_n_s16(vld1q_s16(&input[1 * stride]), 2);
+  *input_2 = vshlq_n_s16(vld1q_s16(&input[2 * stride]), 2);
+  *input_3 = vshlq_n_s16(vld1q_s16(&input[3 * stride]), 2);
+  *input_4 = vshlq_n_s16(vld1q_s16(&input[4 * stride]), 2);
+  *input_5 = vshlq_n_s16(vld1q_s16(&input[5 * stride]), 2);
+  *input_6 = vshlq_n_s16(vld1q_s16(&input[6 * stride]), 2);
+  *input_7 = vshlq_n_s16(vld1q_s16(&input[7 * stride]), 2);
   for (int i = 0; i < 2; ++i) {
     int16x8_t out_0, out_1, out_2, out_3, out_4, out_5, out_6, out_7;
-    const int16x8_t v_s0 = vaddq_s16(input_0, input_7);
-    const int16x8_t v_s1 = vaddq_s16(input_1, input_6);
-    const int16x8_t v_s2 = vaddq_s16(input_2, input_5);
-    const int16x8_t v_s3 = vaddq_s16(input_3, input_4);
-    const int16x8_t v_s4 = vsubq_s16(input_3, input_4);
-    const int16x8_t v_s5 = vsubq_s16(input_2, input_5);
-    const int16x8_t v_s6 = vsubq_s16(input_1, input_6);
-    const int16x8_t v_s7 = vsubq_s16(input_0, input_7);
+      const int16x8_t v_s0 = vaddq_s16(*input_0, *input_7);
+    const int16x8_t v_s1 = vaddq_s16(*input_1, *input_6);
+    const int16x8_t v_s2 = vaddq_s16(*input_2, *input_5);
+    const int16x8_t v_s3 = vaddq_s16(*input_3, *input_4);
+    const int16x8_t v_s4 = vsubq_s16(*input_3, *input_4);
+    const int16x8_t v_s5 = vsubq_s16(*input_2, *input_5);
+    const int16x8_t v_s6 = vsubq_s16(*input_1, *input_6);
+    const int16x8_t v_s7 = vsubq_s16(*input_0, *input_7);
     // fdct4(step, step);
     int16x8_t v_x0 = vaddq_s16(v_s0, v_s3);
     int16x8_t v_x1 = vaddq_s16(v_s1, v_s2);
@@ -254,14 +258,14 @@ void aom_fdct8x8_neon(const int16_t *input, int16_t *final_output, int stride) {
       const int16x8x2_t r67_s16 =
           vtrnq_s16(vreinterpretq_s16_s32(r46_s32.val[1]),
                     vreinterpretq_s16_s32(r57_s32.val[1]));
-      input_0 = r01_s16.val[0];
-      input_1 = r01_s16.val[1];
-      input_2 = r23_s16.val[0];
-      input_3 = r23_s16.val[1];
-      input_4 = r45_s16.val[0];
-      input_5 = r45_s16.val[1];
-      input_6 = r67_s16.val[0];
-      input_7 = r67_s16.val[1];
+      *input_0 = r01_s16.val[0];
+      *input_1 = r01_s16.val[1];
+      *input_2 = r23_s16.val[0];
+      *input_3 = r23_s16.val[1];
+      *input_4 = r45_s16.val[0];
+      *input_5 = r45_s16.val[1];
+      *input_6 = r67_s16.val[0];
+      *input_7 = r67_s16.val[1];
       // 00 10 20 30 40 50 60 70
       // 01 11 21 31 41 51 61 71
       // 02 12 22 32 42 52 62 72
@@ -277,22 +281,49 @@ void aom_fdct8x8_neon(const int16_t *input, int16_t *final_output, int stride) {
     // Post-condition (division by two)
     //    division of two 16 bits signed numbers using shifts
     //    n / 2 = (n - (n >> 15)) >> 1
-    const int16x8_t sign_in0 = vshrq_n_s16(input_0, 15);
-    const int16x8_t sign_in1 = vshrq_n_s16(input_1, 15);
-    const int16x8_t sign_in2 = vshrq_n_s16(input_2, 15);
-    const int16x8_t sign_in3 = vshrq_n_s16(input_3, 15);
-    const int16x8_t sign_in4 = vshrq_n_s16(input_4, 15);
-    const int16x8_t sign_in5 = vshrq_n_s16(input_5, 15);
-    const int16x8_t sign_in6 = vshrq_n_s16(input_6, 15);
-    const int16x8_t sign_in7 = vshrq_n_s16(input_7, 15);
-    input_0 = vhsubq_s16(input_0, sign_in0);
-    input_1 = vhsubq_s16(input_1, sign_in1);
-    input_2 = vhsubq_s16(input_2, sign_in2);
-    input_3 = vhsubq_s16(input_3, sign_in3);
-    input_4 = vhsubq_s16(input_4, sign_in4);
-    input_5 = vhsubq_s16(input_5, sign_in5);
-    input_6 = vhsubq_s16(input_6, sign_in6);
-    input_7 = vhsubq_s16(input_7, sign_in7);
+    const int16x8_t sign_in0 = vshrq_n_s16(*input_0, 15);
+    const int16x8_t sign_in1 = vshrq_n_s16(*input_1, 15);
+    const int16x8_t sign_in2 = vshrq_n_s16(*input_2, 15);
+    const int16x8_t sign_in3 = vshrq_n_s16(*input_3, 15);
+    const int16x8_t sign_in4 = vshrq_n_s16(*input_4, 15);
+    const int16x8_t sign_in5 = vshrq_n_s16(*input_5, 15);
+    const int16x8_t sign_in6 = vshrq_n_s16(*input_6, 15);
+    const int16x8_t sign_in7 = vshrq_n_s16(*input_7, 15);
+    *input_0 = vhsubq_s16(*input_0, sign_in0);
+    *input_1 = vhsubq_s16(*input_1, sign_in1);
+    *input_2 = vhsubq_s16(*input_2, sign_in2);
+    *input_3 = vhsubq_s16(*input_3, sign_in3);
+    *input_4 = vhsubq_s16(*input_4, sign_in4);
+    *input_5 = vhsubq_s16(*input_5, sign_in5);
+    *input_6 = vhsubq_s16(*input_6, sign_in6);
+    *input_7 = vhsubq_s16(*input_7, sign_in7);
+  }
+}
+
+void aom_fdct8x8_neon(const int16_t *input, tran_low_t *final_output, int stride) {
+  int16x8_t input_0, input_1, input_2, input_3, input_4, input_5, input_6, input_7;
+  
+  aom_fdct8x8_helper(input, stride, &input_0, &input_1, &input_2, &input_3, &input_4, &input_5, &input_6, &input_7);
+  
+  {
+    // store results
+    store_s16q_to_tran_low(&final_output[0 * 8], input_0);
+    store_s16q_to_tran_low(&final_output[0 * 8], input_1);
+    store_s16q_to_tran_low(&final_output[0 * 8], input_2);
+    store_s16q_to_tran_low(&final_output[0 * 8], input_3);
+    store_s16q_to_tran_low(&final_output[0 * 8], input_4);
+    store_s16q_to_tran_low(&final_output[0 * 8], input_5);
+    store_s16q_to_tran_low(&final_output[0 * 8], input_6);
+    store_s16q_to_tran_low(&final_output[0 * 8], input_7);
+  }
+}
+
+void aom_fdct8x8_lp_neon(const int16_t *input, int16_t *final_output, int stride) {
+  int16x8_t input_0, input_1, input_2, input_3, input_4, input_5, input_6, input_7;
+  
+  aom_fdct8x8_helper(input, stride, &input_0, &input_1, &input_2, &input_3, &input_4, &input_5, &input_6, &input_7);
+  
+  {
     // store results
     vst1q_s16(&final_output[0 * 8], input_0);
     vst1q_s16(&final_output[1 * 8], input_1);
