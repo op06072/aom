@@ -32,6 +32,8 @@ extern "C" {
 // Armv9.0-A SVE2 instructions.
 #define HAS_SVE2 (1 << 5)
 
+int aom_arm32_cpu_caps(void);
+int aom_arm64_cpu_caps(void);
 int aom_arm_cpu_caps(void);
 
 // Earlier gcc compilers have issues with some neon intrinsics

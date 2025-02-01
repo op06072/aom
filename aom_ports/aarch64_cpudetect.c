@@ -9,11 +9,11 @@
  * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 
-#include "config/aom_config.h"
+// #include "config/aom_config.h"
 
 #include "arm_cpudetect.h"
 
-#include "aom_ports/arm.h"
+// #include "aom_ports/arm.h"
 
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
@@ -212,7 +212,7 @@ static int arm_get_cpu_caps(void) {
 "available for your platform. Rerun cmake with -DCONFIG_RUNTIME_CPU_DETECT=0."
 #endif
 
-int aom_arm_cpu_caps(void) {
+int aom_arm64_cpu_caps(void) {
   int flags = 0;
   if (!arm_cpu_env_flags(&flags)) {
     flags = arm_get_cpu_caps() & arm_cpu_env_mask();

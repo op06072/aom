@@ -71,13 +71,27 @@ static int arm_get_cpu_caps(void) {
 #endif  // HAVE_NEON
   return flags;
 }
-#else   // end __linux__
+#elif defined(__APPLE__)   // end __linux__
+
+#include <sys/sysctl.h>
+
+static int arm_get_cpu_caps(void) {
+    int flags = 0;
+#if HAVE_NEON
+    size_t len = sizeof(flags);
+    if (sysctlbyname("hw.optional.neon", &flags, &len, NULL, 0) == 1) {
+        flags |= HAS_NEON;
+    }
+#endif  // HAVE_NEON
+    return flags;
+}
+#else  // end __APPLE__
 #error \
     "Runtime CPU detection selected, but no CPU detection method " \
 "available for your platform. Rerun cmake with -DCONFIG_RUNTIME_CPU_DETECT=0."
 #endif
 
-int aom_arm_cpu_caps(void) {
+int aom_arm32_cpu_caps(void) {
   int flags = 0;
   if (arm_cpu_env_flags(&flags)) {
     return flags;
